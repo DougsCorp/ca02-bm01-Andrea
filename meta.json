@@ -1,0 +1,20 @@
+﻿{
+    "domain":  "uteishub.com",
+    "bm_id":  "bm01",
+    "pages":  [
+                  {
+                      "path":  "/vsl1/",
+                      "template":  "Presell-ps-CogniClear-v1",
+                      "type":  "ps"
+                  }
+              ],
+    "notes":  "Subdominio qkz em uteishub.com; Presell v1 em /vsl1/",
+    "github_repo":  "DougsCorp/ca02-bm01-Andrea",
+    "operator":  "Andrea",
+    "status":  "deployed",
+    "ca_id":  "ca02",
+    "subdomain":  "qkz",
+    "product":  "CogniClear",
+    "full_url":  "https://qkz.uteishub.com",
+    "ga_measurement_id":  "G-PTY57M66PW"
+}
